@@ -1,5 +1,3 @@
-#include "engine.h"
-
 #if INTERFACE
 #include <allegro5/allegro.h>
 #include <allegro5/allegro_font.h>
@@ -8,8 +6,11 @@
 #include <allegro5/allegro_image.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include "gamestate.h"
 
-typedef struct {
+typedef struct GameState GameState;
+
+typedef struct Engine {
   int screen_width;
   int screen_height;
   void (*pre_update)(Engine *engine, double dt);
@@ -26,17 +27,18 @@ typedef struct {
 } Engine;
 #endif
 
-bool __engine_on_event(ALLEGRO_EVENT event) { return false; }
-void __engine_on_update(double dt) {}
-void __engine_on_draw() { al_clear_to_color(al_map_rgb(16, 128, 16)); }
+#include "engine.h"
 
 Engine *newEngine(int screen_width, int screen_height) {
   Engine *engine = malloc(sizeof(*engine));
   engine->screen_width = screen_width;
   engine->screen_height = screen_height;
-  engine->on_event = __engine_on_event;
-  engine->on_update = __engine_on_update;
-  engine->on_draw = __engine_on_draw;
+  engine->pre_update = NULL;
+  engine->post_update = NULL;
+  engine->pre_draw = NULL;
+  engine->post_draw = NULL;
+  engine->pre_event = NULL;
+  engine->post_event = NULL;
 
   al_init();
   al_init_image_addon();
@@ -67,6 +69,11 @@ int engine_run(Engine *engine) {
   ALLEGRO_EVENT event;
   bool running = true;
   while (running) {
+
+    if (engine->state_index == 0) {
+      running = false;
+      break;
+    }
 
     al_wait_for_event(engine->queue, &event);
     if (event.type == ALLEGRO_EVENT_DISPLAY_CLOSE) {
@@ -104,6 +111,7 @@ int engine_run(Engine *engine) {
     if (engine->post_event != NULL) {
       engine->post_event(engine, event);
     }
+
   }
 
   al_stop_timer(engine->timer);
